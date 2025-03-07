@@ -43,22 +43,47 @@ class Main:
     {Colors.BOLD}4 - EXPORT EVERYTHING{Colors.ENDC}
         {Colors.GRAY}does both of the above: exports  the chapters then 
         the volumes{Colors.ENDC}
+        
+    {Colors.BOLD}0 - EXIT{Colors.ENDC}
+        {Colors.GRAY}exit the program{Colors.ENDC}
     """)
             choice = input("\n-> ")
-            if choice == '1':
-                series.resize_volume_covers()
+            
+            if choice in ['1', '3', '4']:
+                # These options need the dictionary
+                config = Main.select_dictionary()
+                Main.show_config(config)
+                series = Series(
+                    name=config["NAME"],
+                    author=config["AUTHOR"],
+                    root=config["ROOT"],
+                    volumes_filename_template=config["VOLUME_FILENAME_TEMPLATE"],
+                    cover_size=config["COVER_SIZE"],
+                    dictionary=config["DICTIONARY"],
+                )
+                if choice == '1':
+                    series.resize_volume_covers()
+                elif choice == '3':
+                    series.generate_volumes()
+                    series.export_volumes()
+                elif choice == '4':
+                    series.export_chapters()
+                    series.generate_volumes()
+                    series.export_volumes()
                 Colors.job_done()
-            if choice == '2':
+                
+            elif choice == '2':
+                # This option doesn't need the dictionary
+                root_path = input("Enter the path to your manga folder: ")
+                series = Series(
+                    name="",
+                    author="",
+                    root=root_path,
+                    volumes_filename_template="",
+                    cover_size=None,
+                    dictionary=None,
+                )
                 series.export_chapters()
-                Colors.job_done()
-            if choice == '3':
-                series.generate_volumes()
-                series.export_volumes()
-                Colors.job_done()
-            if choice == '4':
-                series.export_chapters()
-                series.generate_volumes()
-                series.export_volumes()
                 Colors.job_done()
                 choice = '0'
 
@@ -96,14 +121,5 @@ class Main:
 
 if __name__ == '__main__':
     Main.print_logo()
-    config = Main.select_dictionary()
-    Main.show_config(config)
-    series: Series = Series(
-        name=config["NAME"],
-        author=config["AUTHOR"],
-        root=config["ROOT"],
-        volumes_filename_template=config["VOLUME_FILENAME_TEMPLATE"],
-        cover_size=config["COVER_SIZE"],
-        dictionary=config["DICTIONARY"],
-    )
-    Main.show_menu(series)
+    Main.show_menu(None)
+

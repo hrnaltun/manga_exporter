@@ -23,7 +23,7 @@ class Series:
         self.author = author
         self.root = root
         self.cover_size = cover_size
-        self.dictionary = sorted(dictionary, key=lambda x: x['volume'])
+        self.dictionary = sorted(dictionary, key=lambda x: x['volume']) if dictionary is not None else []
         self.volumes = volumes
         self.volumes_filename_template = volumes_filename_template
 
@@ -66,24 +66,53 @@ class Series:
     def export_chapters(self):
         """
         Export chapters of the series by converting images to PDF.
+        Each chapter will be saved as a separate PDF file without being combined into volumes.
         """
-
-        folders = [folder for folder in os.listdir(self.root) if os.path.isdir(os.path.join(self.root, folder))]
-        folders = sorted(folders, key=lambda x: float(x[x.find(' ') + 1:x.find('-') - 1]))
-        for folder in folders:
+        print(f"{Colors.BOLD}Exporting chapters to PDF...{Colors.ENDC}")
+        
+        # Get all chapter folders
+        chapters = self.get_all_chapters()
+        
+        for chapter in chapters:
             try:
-                images_path = [os.path.join(self.root, folder, image) for image in
-                               os.listdir(os.path.join(self.root, folder))]
+                if not chapter.folder_path or not os.path.exists(chapter.folder_path):
+                    print(f"Chapter {chapter.number} folder not found")
+                    continue
+                    
+                # Get all images in the chapter folder
+                images_path = [os.path.join(chapter.folder_path, image) for image in 
+                              os.listdir(chapter.folder_path) if image.endswith(('.jpg', '.jpeg', '.png'))]
+                
+                # Sort images by filename
+                images_path = sorted(images_path)
+                
+                if not images_path:
+                    print(f"No images found in chapter {chapter.number}")
+                    continue
+                
+                # Create output directory if it doesn't exist
+                output_dir = os.path.join(self.root, "individual_chapters")
+                os.makedirs(output_dir, exist_ok=True)
+                
+                # Create PDF filename
+                pdf_filename = f"Chapter_{chapter.number:.1f}.pdf"
+                pdf_path = os.path.join(output_dir, pdf_filename)
+                
+                # Convert images to RGB format
                 images_img = [Image.open(image_path) for image_path in images_path]
                 images_rgb = [img.convert('RGB') for img in images_img]
-                images_rgb.pop(0).save(f'{os.path.join(self.root, folder)}.pdf', save_all=True,
-                                       append_images=images_rgb)
-                size = os.path.getsize(f'{os.path.join(self.root, folder)}.pdf')
-                print(f'{folder}.pdf {Colors.GREEN}created! {size / 1000000:.2f} MB{Colors.ENDC}')
+                
+                # Save as PDF
+                if images_rgb:
+                    images_rgb[0].save(pdf_path, save_all=True, append_images=images_rgb[1:])
+                    size = os.path.getsize(pdf_path)
+                    print(f'Chapter {chapter.number} {Colors.GREEN}created! {size / 1000000:.2f} MB{Colors.ENDC}')
+                else:
+                    print(f'Chapter {chapter.number} {Colors.RED}No images to convert{Colors.ENDC}')
+                    
             except Exception as e:
-                print(f'{folder}.pdf {Colors.RED}ERROR: {e}{Colors.ENDC}')
+                print(f'Chapter {chapter.number} {Colors.RED}ERROR: {e}{Colors.ENDC}')
                 continue
-
     def resize_volume_covers(self):
         """
         It will iterate over the first chapter of each volume and resize the cover to the specified size.
